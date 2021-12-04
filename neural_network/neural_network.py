@@ -23,17 +23,15 @@ class NeuralNetwork:
         self.learn_curve = []
         self.curr_loss = None
 
+        if mode == 'on-line':
+            self.batch_size = 1
+        else:
+            self.batch_size = batch_size
+
         if loss_fun == 'sum-of-square':
             self.loss_fun = sumOfSquare
         else:
             self.loss_fun = crossEntropySM
-
-        if self.mode == 'full-batch':
-            self.batch_size = None
-        elif self.mode == 'on-line':
-            self.batch_size = 1
-        else:  # mini-batch or on-line
-            self.batch_size = batch_size
 
     def add_layer(self, layer):
         self.layers.append(layer)
@@ -56,34 +54,39 @@ class NeuralNetwork:
         err = 1
         start = time()
         ret = []
-        while (self.target_epochs is None or self.target_epochs > epoch) and \
-                (self.target_loss is None or err > self.target_loss) and \
-                (self.target_acc is None or train_acc < self.target_acc):  # fino alla condizione di stop
-            epoch += 1
-            err = 0
-            for i in range(n_sample):  # per ogni dato nel t.s.
-                # bisogna aggiornare i pesi se sono finiti i dati o se ci troviamo alla fine del batch
-                to_update = (i == n_sample - 1 or i % self.batch_size + 1 == self.batch_size)
-                self._back_prop(X[i, :], target[i, :], self.batch_size, to_update)
+        try:
+            while (self.target_epochs is None or self.target_epochs > epoch) and \
+                    (self.target_loss is None or err > self.target_loss) and \
+                    (self.target_acc is None or train_acc < self.target_acc):  # fino alla condizione di stop
+                epoch += 1
+                err = 0
+                for i in range(n_sample):  # per ogni dato nel t.s.
+                    # bisogna aggiornare i pesi se ci troviamo alla fine del batch
+                    to_update = (i % self.batch_size + 1 == self.batch_size)
+                    self._back_prop(X[i, :], target[i, :], self.batch_size, to_update)
 
-                err += np.sum(np.abs(self.curr_loss))
-                sys.stdout.write(f"epoch {epoch} processing sample {i + 1}/{n_sample} curr loss:{err / (i + 1)}\r")
+                    err += np.sum(np.abs(self.curr_loss))
+                    sys.stdout.write(f"epoch {epoch} processing sample {i + 1}/{n_sample} curr loss:{err / (i + 1)}\r")
+                    sys.stdout.flush()
+
+                err /= n_sample
+                print()
+                sys.stdout.write(f"calculating training accuracy...\r")
                 sys.stdout.flush()
 
-            err /= n_sample
-            print()
-            sys.stdout.write(f"calculating training accuracy...\r")
-            sys.stdout.flush()
+                train_acc = (n_sample - np.count_nonzero(self.predict(X) - y)) / n_sample  # accuracy
+                print(f"epoch {epoch} training accuracy: {train_acc}")
+                if valid_X is not None:
+                    sys.stdout.write(f"calculating validation accuracy...\r")
+                    sys.stdout.flush()
+                    valid_acc = (valid_X.shape[0] - np.count_nonzero(self.predict(valid_X) - valid_y)) / valid_X.shape[
+                        0]
+                    print(f"epoch {epoch} validation accuracy: {valid_acc}")
 
-            train_acc = (n_sample - np.count_nonzero(self.predict(X) - y)) / n_sample  # accuracy
-            print(f"epoch {epoch} training accuracy: {train_acc}")
-            if valid_X is not None:
-                sys.stdout.write(f"calculating validation accuracy...\r")
-                sys.stdout.flush()
-                valid_acc = (valid_X.shape[0] - np.count_nonzero(self.predict(valid_X) - valid_y)) / valid_X.shape[0]
-                print(f"epoch {epoch} validation accuracy: {valid_acc}")
-
-            ret.append({'epoch': 1, 'loss': err, 'train_acc': train_acc, 'valid_acc': valid_acc})
+                ret.append({'epoch': epoch, 'loss': err, 'train_accuracy': train_acc,
+                            'validation_accuracy': valid_acc})  # dati sul training
+        except KeyboardInterrupt:
+            print("\ntraining stopped by user\n")
 
         print(f"elapsed time: {time() - start} s")
         return np.array(ret)
@@ -106,7 +109,6 @@ class NeuralNetwork:
 
         self.curr_loss = self.loss_fun(curr, t[..., None])  # calcolo perdita
         curr = self.loss_fun.derivative(curr, t[..., None])  # calcolo gradiente
-        print(f"shape: {curr.shape}")
 
         if self.loss_metric == 'cross-entropy':  # normalizza perdita
             self.curr_loss /= np.log(t.shape[0])
