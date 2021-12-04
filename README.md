@@ -28,7 +28,7 @@ NeuralNetwork class is shipped with 3 main public methods:
 * *from_file(filepath)* static method that return a NeuralNetwork object loaded from a filepath
 * *reset()*: reinitialize network
 
-### LAYERS
+### Layers
 
 Layers are the core of the neural network. a layer is a class that define
 the following attributes:
