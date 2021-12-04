@@ -105,9 +105,12 @@ there are 3 modules with already implemented layers
 
 the test folder contain 4 example experiments:
 
-* test_cancer.py with the sklearn breast cancer dataset 
-* test_wine.py with the sklearn wine dataset
-* test_digit_x8.py with the sklearn digit 8x8 dataset
-* test_digit_x28.py with the MNIST dataset (loaded from keras.datasets)
-* gui.py a gui app that allow to paint digit and use the net trained on MNIST data to 
+
+* test_conv.py: test a convolution network on sklearn digit dataset
+* test_conv_resilient.py: same but with r-prop
+* test_wine.py: test a mlp with the sklearn wine dataset
+* test_wine_resilient.py: same but with r-prop
+* test_mnist_2_3_7.py: test a cnn on mnist dataset
+* test_mnist_res_2_3_7.py: same but with r-prop
+* gui.py: a tkinter gui app that allow to paint digit and use the net trained on MNIST data to 
   classify them
